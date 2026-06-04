@@ -43,6 +43,11 @@ export default function StorefrontWidget({
   // If active role is 'admin', we simulate the premium view using the first customer
   const customer = activeCustomer || customers[0];
 
+  // If app is disabled via Shopify Theme App Embed settings, do not render to buyers unless we are designing inside customizer
+  if (settings.appEmbedEnabled === false && !isInline) {
+    return null;
+  }
+
   if (!customer) return null;
 
   // Sync default account name

@@ -81,6 +81,7 @@ export interface ShopifySettings {
   widgetPosition: 'bottom-right' | 'bottom-left';
   showWelcomeBubble: boolean;
   isConnected?: boolean;
+  appEmbedEnabled?: boolean;
 }
 
 export interface DatabaseSchema {

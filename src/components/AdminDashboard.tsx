@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Customer, RedemptionRequest, AuditLog, MockEmail, ShopifySettings } from '../types.js';
 import { ShieldCheck, Users, Banknote, ClipboardList, Check, X, FileText, RefreshCw, Sparkles, Database, Mail, ChevronDown, ChevronUp, Settings2, Sliders, Palette, Link, Eye, Copy, Monitor, Code2 } from 'lucide-react';
 import StorefrontWidget from './StorefrontWidget.js';
+import ShopifyThemeEditor from './ShopifyThemeEditor.js';
 
 interface AdminDashboardProps {
   customers: Customer[];
@@ -82,6 +83,8 @@ export default function AdminDashboard({
   const [widgetPosition, setWidgetPosition] = useState<'bottom-right' | 'bottom-left'>('bottom-right');
   const [showWelcomeBubble, setShowWelcomeBubble] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const [appEmbedEnabled, setAppEmbedEnabled] = useState(true);
+  const [showThemeEditor, setShowThemeEditor] = useState(false);
 
   // Sync settings when loaded from main API
   useEffect(() => {
@@ -102,6 +105,7 @@ export default function AdminDashboard({
       setWidgetPosition(settings.widgetPosition || 'bottom-right');
       setShowWelcomeBubble(settings.showWelcomeBubble !== undefined ? settings.showWelcomeBubble : true);
       setIsConnected(settings.isConnected !== undefined ? settings.isConnected : false);
+      setAppEmbedEnabled(settings.appEmbedEnabled !== undefined ? settings.appEmbedEnabled : true);
     }
   }, [settings]);
 
@@ -127,7 +131,8 @@ export default function AdminDashboard({
       widgetThemeColor,
       widgetPosition,
       showWelcomeBubble,
-      isConnected
+      isConnected,
+      appEmbedEnabled
     };
 
     try {
@@ -817,6 +822,30 @@ export default function AdminDashboard({
               </p>
             </div>
 
+            {/* Shopify Theme Editor App Embedded customizer callout banner */}
+            <div className="bg-gradient-to-r from-emerald-500/10 via-indigo-50/5 to-indigo-50/20 border border-emerald-355 p-5 rounded-3xl shrink-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+              <div className="space-y-1 max-w-xl">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono">
+                  🎨 Storefront App Embed Integration Active
+                </span>
+                <h4 className="text-xs font-extrabold text-neutral-900 leading-snug">
+                  Install Widget via Shopify Theme Customizer Extension
+                </h4>
+                <p className="text-[11px] text-slate-550 leading-relaxed">
+                  In modern Shopify Online Store 2.0 Themes (like Dawn v15.0), your points & checkout widgets are loaded instantly as high-performance <strong>App Embedded Blocks</strong>. Toggle the widget on/off, customize brand colors, adjust positions, and test direct orders right in our theme preview.
+                </p>
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setShowThemeEditor(true)}
+                className="bg-[#008060] hover:bg-[#006e52] text-white font-extrabold text-xs px-5 py-3 rounded-2xl cursor-pointer flex items-center gap-2 tracking-wide font-display self-stretch md:self-auto text-center justify-center border border-emerald-400 shadow-xs shrink-0 transition-all hover:scale-[1.02] font-semibold"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Open Shopify Theme Editor (App Embeds)</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               {/* Left Column: API & Rules */}
@@ -1450,6 +1479,18 @@ export default function AdminDashboard({
         )}
 
       </div>
+
+      {showThemeEditor && (
+        <ShopifyThemeEditor
+          customers={customers}
+          redemptionRequests={redemptionRequests}
+          settings={settings}
+          onClose={() => setShowThemeEditor(false)}
+          onSettingsSaved={() => {
+            onAdminAction();
+          }}
+        />
+      )}
 
     </div>
   );

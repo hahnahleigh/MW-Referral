@@ -18,7 +18,8 @@ const DEFAULT_SETTINGS: ShopifySettings = {
   widgetThemeColor: '#4f46e5',
   widgetPosition: 'bottom-right',
   showWelcomeBubble: true,
-  isConnected: false
+  isConnected: false,
+  appEmbedEnabled: true
 };
 
 const DB_FILE = path.join(process.cwd(), 'data-store.json');
