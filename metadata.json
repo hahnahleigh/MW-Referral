@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Shopify Rewards System",
+  "description": "Loyalty rewards app for businesses in the Philippines allowing points conversion to cash payouts via GCash, Maya, or bank account.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
