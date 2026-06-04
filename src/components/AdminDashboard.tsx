@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Customer, RedemptionRequest, AuditLog, MockEmail } from '../types.js';
-import { ShieldCheck, Users, Banknote, ClipboardList, Check, X, FileText, RefreshCw, Sparkles, Database, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Customer, RedemptionRequest, AuditLog, MockEmail, ShopifySettings } from '../types.js';
+import { ShieldCheck, Users, Banknote, ClipboardList, Check, X, FileText, RefreshCw, Sparkles, Database, Mail, ChevronDown, ChevronUp, Settings2, Sliders, Palette, Link, Eye, Copy, Monitor, Code2 } from 'lucide-react';
+import StorefrontWidget from './StorefrontWidget.js';
 
 interface AdminDashboardProps {
   customers: Customer[];
@@ -8,6 +9,7 @@ interface AdminDashboardProps {
   auditLogs: AuditLog[];
   mockEmails?: MockEmail[];
   referrals?: any[];
+  settings: ShopifySettings | null;
   onAdminAction: () => void;
 }
 
@@ -51,15 +53,102 @@ export default function AdminDashboard({
   auditLogs,
   mockEmails = [],
   referrals = [],
+  settings,
   onAdminAction
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'payouts' | 'customers' | 'audit' | 'emails' | 'referrals' | 'reset'>('payouts');
+  const [activeTab, setActiveTab] = useState<'payouts' | 'customers' | 'audit' | 'emails' | 'referrals' | 'settings' | 'reset'>('payouts');
   
   // Action control states
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [refNumbers, setRefNumbers] = useState<{ [key: string]: string }>({});
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
+
+  // Shopify customizable configurations form states
+  const [storeName, setStoreName] = useState('Artisan Bakery Manila');
+  const [shopifyDomain, setShopifyDomain] = useState('potopotostudio.myshopify.com');
+  const [apiAccessToken, setApiAccessToken] = useState('shpat_v12489');
+  const [webhookSecret, setWebhookSecret] = useState('whsec_v12489');
+  const [pointsPerPesoSpent, setPointsPerPesoSpent] = useState(1);
+  const [minPointsToRedeem, setMinPointsToRedeem] = useState(100);
+  const [pointsToPesoRate, setPointsToPesoRate] = useState(1);
+  const [allowGCash, setAllowGCash] = useState(true);
+  const [allowMaya, setAllowMaya] = useState(true);
+  const [allowBank, setAllowBank] = useState(true);
+  const [allowQRPh, setAllowQRPh] = useState(true);
+  const [widgetLauncherText, setWidgetLauncherText] = useState('🇵🇭 Rewards & Cashouts');
+  const [widgetThemeColor, setWidgetThemeColor] = useState('#4f46e5');
+  const [widgetPosition, setWidgetPosition] = useState<'bottom-right' | 'bottom-left'>('bottom-right');
+  const [showWelcomeBubble, setShowWelcomeBubble] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Sync settings when loaded from main API
+  useEffect(() => {
+    if (settings) {
+      setStoreName(settings.storeName || '');
+      setShopifyDomain(settings.shopifyDomain || '');
+      setApiAccessToken(settings.apiAccessToken || '');
+      setWebhookSecret(settings.webhookSecret || '');
+      setPointsPerPesoSpent(settings.pointsPerPesoSpent !== undefined ? settings.pointsPerPesoSpent : 1);
+      setMinPointsToRedeem(settings.minPointsToRedeem !== undefined ? settings.minPointsToRedeem : 100);
+      setPointsToPesoRate(settings.pointsToPesoRate !== undefined ? settings.pointsToPesoRate : 1);
+      setAllowGCash(settings.allowGCash !== undefined ? settings.allowGCash : true);
+      setAllowMaya(settings.allowMaya !== undefined ? settings.allowMaya : true);
+      setAllowBank(settings.allowBank !== undefined ? settings.allowBank : true);
+      setAllowQRPh(settings.allowQRPh !== undefined ? settings.allowQRPh : true);
+      setWidgetLauncherText(settings.widgetLauncherText || '🇵🇭 Rewards & Cashouts');
+      setWidgetThemeColor(settings.widgetThemeColor || '#4f46e5');
+      setWidgetPosition(settings.widgetPosition || 'bottom-right');
+      setShowWelcomeBubble(settings.showWelcomeBubble !== undefined ? settings.showWelcomeBubble : true);
+      setIsConnected(settings.isConnected !== undefined ? settings.isConnected : false);
+    }
+  }, [settings]);
+
+  const handleSettingsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setActionError(null);
+    setActionSuccess(null);
+
+    const payload = {
+      storeName,
+      shopifyDomain,
+      apiAccessToken,
+      webhookSecret,
+      pointsPerPesoSpent: Number(pointsPerPesoSpent) || 1,
+      minPointsToRedeem: Number(minPointsToRedeem) || 100,
+      pointsToPesoRate: Number(pointsToPesoRate) || 1,
+      allowGCash,
+      allowMaya,
+      allowBank,
+      allowQRPh,
+      widgetLauncherText,
+      widgetThemeColor,
+      widgetPosition,
+      showWelcomeBubble,
+      isConnected
+    };
+
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setActionSuccess('Shopify Settings saved successfully! Embedded widget live styles updated in real-time.');
+        onAdminAction();
+      } else {
+        setActionError(data.error || 'Failed to update settings parameters.');
+      }
+    } catch (err: any) {
+      setActionError(err.message || 'Error occurred while saving settings.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Summary statistics
   const totalCustomerPoints = customers.reduce((sum, c) => sum + c.pointsBalance, 0);
@@ -345,6 +434,17 @@ export default function AdminDashboard({
             }`}
           >
             👥 Global Referrals ({referrals.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`pb-2 text-sm font-semibold tracking-tight transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'settings'
+                ? 'border-b-2 border-indigo-600 text-indigo-600 font-bold font-display'
+                : 'text-slate-500 hover:text-slate-900 font-medium'
+            }`}
+          >
+            ⚙️ Shopify Settings & Stylings
           </button>
 
           <button
@@ -701,6 +801,623 @@ export default function AdminDashboard({
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 3.8: Shopify Settings & Stylings Customizer */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6 font-sans text-xs animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-base font-bold text-gray-900 font-display flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-indigo-600" />
+                Shopify Integration & Stylings Control Desk
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Configure your store credentials, adjust Filippine wallet payout triggers, and personalize the floating storefront rewards widget.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Left Column: API & Rules */}
+              <div className="space-y-6">
+                
+                {/* 1. Shopify Connection API Section */}
+                <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-200 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-205 pb-2">
+                    <Link className="w-4 h-4 text-slate-500" />
+                    Shopify Credentials & Webhooks
+                  </h4>
+
+                  {/* Production mode toggle */}
+                  <div className="bg-indigo-50/55 border border-indigo-100 p-3 rounded-xl flex items-center justify-between gap-3">
+                    <div>
+                      <span className="font-bold text-indigo-950 text-xs block">🔌 Connect Shopify Production Store</span>
+                      <span className="text-[10px] text-indigo-600 block leading-relaxed">
+                        Disable local Sandbox view and track real Shopify customers on your live store.
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isConnected}
+                        onChange={(e) => setIsConnected(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Store Name Identifier
+                      </label>
+                      <input
+                        type="text"
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                        placeholder="e.g. PH Artisan Bakery"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Shopify Domain (*.myshopify.com)
+                      </label>
+                      <input
+                        type="text"
+                        value={shopifyDomain}
+                        onChange={(e) => setShopifyDomain(e.target.value)}
+                        className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
+                        placeholder="store-name.myshopify.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                      Admin API Access Token (shpat_***)
+                    </label>
+                    <input
+                      type="password"
+                      value={apiAccessToken}
+                      onChange={(e) => setApiAccessToken(e.target.value)}
+                      className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
+                      placeholder="shpat_abcdefg..."
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                      Webhook Secret Signatures Key (whsec_***)
+                    </label>
+                    <input
+                      type="password"
+                      value={webhookSecret}
+                      onChange={(e) => setWebhookSecret(e.target.value)}
+                      className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
+                      placeholder="whsec_abcdefg..."
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Points Rules and Valuations */}
+                <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-200 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-205 pb-2">
+                    <Sliders className="w-4 h-4 text-slate-500" />
+                    Loyalty Credit & Exchange Ledger Rules
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Earning multiplier
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={pointsPerPesoSpent}
+                          onChange={(e) => setPointsPerPesoSpent(Number(e.target.value))}
+                          min="0.1"
+                          step="0.1"
+                          className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl focus:outline-hidden focus:ring-1"
+                        />
+                        <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400">pts/₱</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Min redeem points
+                      </label>
+                      <input
+                        type="number"
+                        value={minPointsToRedeem}
+                        onChange={(e) => setMinPointsToRedeem(Number(e.target.value))}
+                        min="1"
+                        className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl focus:outline-hidden focus:ring-1"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Point Value Rate (PHP)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={pointsToPesoRate}
+                          onChange={(e) => setPointsToPesoRate(Number(e.target.value))}
+                          min="0.01"
+                          step="0.01"
+                          className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl"
+                        />
+                        <span className="absolute right-3 top-2 text-[11px] font-bold text-emerald-600 font-mono">₱/pt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 italic">
+                    With current setup: 1 spent cashout credit conversion evaluates at <b>1 Point = ₱{pointsToPesoRate.toFixed(2)} PHP</b>, with a minimum required checkpoint of <b>{minPointsToRedeem} points</b>.
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Right Column: Payout Channels & Widget Styling */}
+              <div className="space-y-6">
+
+                {/* 3. Payout Channels Toggle */}
+                <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-200 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-205 pb-2">
+                    <Banknote className="w-4 h-4 text-slate-500" />
+                    Whitelabled PH Mobile Wallets & Gateways
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-colors ${allowGCash ? 'bg-blue-50/50 text-blue-900 border-blue-200' : 'bg-white text-slate-400 border-slate-200'}`}>
+                      <input
+                        type="checkbox"
+                        checked={allowGCash}
+                        onChange={(e) => setAllowGCash(e.target.checked)}
+                        className="rounded accent-blue-600"
+                      />
+                      <div>
+                        <span className="font-bold text-xs">GCash Wallet</span>
+                        <span className="text-[9px] block text-slate-400">PH Mobile Number</span>
+                      </div>
+                    </label>
+
+                    <label className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-colors ${allowMaya ? 'bg-emerald-50/50 text-emerald-900 border-emerald-200' : 'bg-white text-slate-400 border-slate-200'}`}>
+                      <input
+                        type="checkbox"
+                        checked={allowMaya}
+                        onChange={(e) => setAllowMaya(e.target.checked)}
+                        className="rounded accent-emerald-600"
+                      />
+                      <div>
+                        <span className="font-bold text-xs">Maya Wallet</span>
+                        <span className="text-[9px] block text-slate-400">PH Mobile wallet</span>
+                      </div>
+                    </label>
+
+                    <label className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-colors ${allowBank ? 'bg-indigo-50/50 text-indigo-900 border-indigo-200' : 'bg-white text-slate-400 border-slate-200'}`}>
+                      <input
+                        type="checkbox"
+                        checked={allowBank}
+                        onChange={(e) => setAllowBank(e.target.checked)}
+                        className="rounded accent-indigo-600"
+                      />
+                      <div>
+                        <span className="font-bold text-xs">Bank Transfer</span>
+                        <span className="text-[9px] block text-slate-400">BPI/BDO Peso account</span>
+                      </div>
+                    </label>
+
+                    <label className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-colors ${allowQRPh ? 'bg-violet-50/50 text-violet-900 border-violet-200' : 'bg-white text-slate-400 border-slate-200'}`}>
+                      <input
+                        type="checkbox"
+                        checked={allowQRPh}
+                        onChange={(e) => setAllowQRPh(e.target.checked)}
+                        className="rounded accent-violet-600"
+                      />
+                      <div>
+                        <span className="font-bold text-xs">QR Ph Code</span>
+                        <span className="text-[9px] block text-slate-400">Standard PH QR Code</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 4. Widget Stylings */}
+                <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-200 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2 border-b border-slate-205 pb-2">
+                    <Palette className="w-4 h-4 text-slate-500" />
+                    Embedded Storefront Widget Visual Stylings
+                  </h4>
+
+                  <div>
+                    <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                      Floating Launcher Text
+                    </label>
+                    <input
+                      type="text"
+                      value={widgetLauncherText}
+                      onChange={(e) => setWidgetLauncherText(e.target.value)}
+                      className="w-full bg-white text-slate-800 py-2 px-3 border border-slate-250 rounded-xl"
+                      placeholder="e.g. 🇵🇭 Earn Rewards"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Primary Widget Brand Color (HEX)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={widgetThemeColor}
+                          onChange={(e) => setWidgetThemeColor(e.target.value)}
+                          className="w-10 h-8 border border-slate-300 rounded-lg shrink-0 cursor-pointer p-0"
+                        />
+                        <input
+                          type="text"
+                          value={widgetThemeColor}
+                          onChange={(e) => setWidgetThemeColor(e.target.value)}
+                          className="w-full bg-white text-slate-800 py-1.5 px-3 border border-slate-250 font-mono uppercase text-xs rounded-xl"
+                          placeholder="#4F46E5"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Storefront Anchor Position
+                      </label>
+                      <select
+                        value={widgetPosition}
+                        onChange={(e) => setWidgetPosition(e.target.value as any)}
+                        className="w-full bg-white text-slate-850 py-2 px-3 border border-slate-250 rounded-xl focus:outline-hidden"
+                      >
+                        <option value="bottom-right">Bottom Right of Web Screen</option>
+                        <option value="bottom-left">Bottom Left of Web Screen</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={showWelcomeBubble}
+                      onChange={(e) => setShowWelcomeBubble(e.target.checked)}
+                      className="rounded accent-indigo-600"
+                    />
+                    <span className="text-slate-600 font-semibold select-none">
+                      Show initial welcome bubble notification on browser load
+                    </span>
+                  </label>
+                </div>
+
+              </div>
+
+              {/* Right Column: Code Embed & Sandbox or Real Customer Track */}
+              <div className="space-y-6">
+                
+                {/* Shopify Embedded Integration Setup & Live Sandbox Preview or Real Customer Tracking */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-205 shadow-xs space-y-6">
+                  
+                  {!isConnected ? (
+                    <>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <Code2 className="w-4 h-4 text-indigo-600" />
+                      🔌 Shopify Theme Embed Code & Script Installation
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      The floating Points & Cashback client widget is designed specifically for your <strong>Shopify Storefront (buyers' environment)</strong>. It remains completely hidden inside your merchant dashboard app and central portals. Install it on your active shopify site by adding this asynchronous script to your layout:
+                    </p>
+                  </div>
+
+                  {/* Code Snippet Block */}
+                  <div className="relative">
+                    <pre className="p-4 bg-slate-900 text-slate-100 text-[11px] font-mono rounded-2xl overflow-x-auto border border-slate-850 select-all leading-relaxed whitespace-pre-wrap">
+{`<!-- Place this code snippet right before the </body> tag inside your Shopify's layout/theme.liquid file -->
+<script
+  src="https://cdn.artisanrewards.ph/widget/embedded-loyalty.js"
+  data-shopify-shop="${shopifyDomain || 'storename.myshopify.com'}"
+  data-theme-color="${widgetThemeColor}"
+  data-position="${widgetPosition}"
+  data-bubble="${showWelcomeBubble}"
+  async>
+</script>`}
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const code = `<!-- Place this code snippet right before the </body> tag inside your Shopify's layout/theme.liquid file -->\n<script\n  src="https://cdn.artisanrewards.ph/widget/embedded-loyalty.js"\n  data-shopify-shop="${shopifyDomain || 'storename.myshopify.com'}"\n  data-theme-color="${widgetThemeColor}"\n  data-position="${widgetPosition}"\n  data-bubble="${showWelcomeBubble}"\n  async>\n</script>`;
+                        navigator.clipboard.writeText(code);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
+                      }}
+                      className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 text-white rounded-lg p-1.5 transition-all text-[11px] font-semibold flex items-center gap-1 cursor-pointer border border-white/15"
+                    >
+                      {copiedCode ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-450">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-300" />
+                          <span>Copy Embed Code</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Live Sandbox Container */}
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                          <Monitor className="w-4 h-4 text-slate-550" />
+                          👁️ Storefront Embedded Sandbox (Live Preview Simulator)
+                        </h5>
+                        <p className="text-[11px] text-slate-400">
+                          Interact with your loyalty widget as a buyer inside this simulated Shopify Storefront browser frame below:
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-extrabold text-indigo-750 font-mono">LIVE STYLES BOUNDED</span>
+                      </div>
+                    </div>
+
+                    {/* Mock Browser Frame */}
+                    <div className="border border-slate-200 rounded-3xl overflow-hidden shadow-xs bg-slate-50 flex flex-col relative h-[520px]">
+                      
+                      {/* Browser URL bar / header */}
+                      <div className="bg-slate-50 border-b border-slate-205 px-4 py-3 flex items-center gap-3 shrink-0">
+                        {/* Dots */}
+                        <div className="flex gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                        </div>
+                        {/* URL Bar */}
+                        <div className="flex-1 max-w-md bg-white border border-slate-200 rounded-xl px-4 py-1 flex items-center gap-2">
+                          <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold font-mono">HTTPS</span>
+                          <span className="text-[11px] text-slate-600 font-mono truncate select-all">{shopifyDomain || 'storename.myshopify.com'}/shop/products</span>
+                        </div>
+                        {/* Status badge */}
+                        <span className="text-[9px] font-bold text-emerald-650 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded font-mono uppercase">Storefront Live</span>
+                      </div>
+
+                      {/* Browser Body Area representing a mock layout */}
+                      <div className="flex-1 bg-white p-5 overflow-y-auto relative flex flex-col justify-between">
+                        <div>
+                          {/* Store banner */}
+                          <div className="border-b border-slate-100 pb-3 mb-4 flex justify-between items-center bg-slate-50 -mx-5 -mt-5 px-5 py-4">
+                            <div className="flex items-center gap-2 mr-2">
+                              <span className="text-xl">🎪</span>
+                              <div>
+                                <span className="font-extrabold text-slate-805 block text-xs tracking-tight">{storeName || 'Artisan Bakery Manila'}</span>
+                                <span className="text-[9px] text-slate-400 block font-mono">Craft Bakery Specialty Shop</span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-1 rounded-lg font-bold">🛒 Cart (0)</span>
+                          </div>
+
+                          {/* Store Mock Content */}
+                          <div className="space-y-4">
+                            <div>
+                              <h6 className="font-bold text-slate-800 text-xs">Recommended Artisan Breads & Pastries</h6>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Order below or simulate webhook purchases to see point rewards in the floating widget!</p>
+                            </div>
+
+                            {/* Product Grid Mock */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              
+                              {/* Item 1 */}
+                              <div className="border border-slate-150 p-3 rounded-2xl flex gap-3 bg-white hover:border-slate-300 transition-colors">
+                                <span className="text-2xl bg-amber-50 p-2.5 rounded-xl self-center">🥐</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[10px] bg-emerald-50 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded uppercase block w-max font-mono mb-1">P500 Promo</span>
+                                  <span className="font-bold text-xs text-slate-805 block truncate">Purple Yam Ube Pandesal Bundle</span>
+                                  <span className="text-[10px] text-slate-450 block font-bold font-mono mt-0.5">₱750.00 PHP</span>
+                                </div>
+                              </div>
+
+                              {/* Item 2 */}
+                              <div className="border border-slate-150 p-3 rounded-2xl flex gap-3 bg-white hover:border-slate-300 transition-colors">
+                                <span className="text-2xl bg-amber-50 p-2.5 rounded-xl self-center">🍰</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[10px] bg-slate-100 text-slate-650 font-bold px-1.5 py-0.5 rounded uppercase block w-max font-mono mb-1">Bestseller</span>
+                                  <span className="font-bold text-xs text-slate-805 block truncate">Leche Flan Custard Bread basket</span>
+                                  <span className="text-[10px] text-slate-450 block font-bold font-mono mt-0.5">₱480.00 PHP</span>
+                                </div>
+                              </div>
+
+                            </div>
+
+                            {/* Informational Hint */}
+                            <div className="bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100/50 text-[11px] text-slate-600 leading-relaxed space-y-1">
+                              <p className="font-bold text-slate-850 flex items-center gap-1">
+                                <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                How do customers use this widget on Shopify?
+                              </p>
+                              <p className="text-slate-550">
+                                1. They click the launcher button: <b>"{widgetLauncherText}"</b> to view points.<br/>
+                                2. They can directly convert their loyalty balance to local PH Payout channels (GCash, Maya, Bank) right from the floating card.<br/>
+                                3. They receive SMTP notifications and check status ledger logs securely inside their viewport.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Inline Storefront widget rendered here exclusively */}
+                        <div className="absolute inset-x-0 bottom-0 top-0 pointer-events-none">
+                          <div className="relative w-full h-full pointer-events-auto overflow-hidden">
+                            <StorefrontWidget
+                              activeCustomer={customers[0]}
+                              customers={customers}
+                              pointTransactions={[]}
+                              redemptionRequests={redemptionRequests}
+                              settings={{
+                                storeName,
+                                shopifyDomain,
+                                apiAccessToken,
+                                webhookSecret,
+                                pointsPerPesoSpent,
+                                minPointsToRedeem,
+                                pointsToPesoRate,
+                                allowGCash,
+                                allowMaya,
+                                allowBank,
+                                allowQRPh,
+                                widgetLauncherText,
+                                widgetThemeColor,
+                                widgetPosition,
+                                showWelcomeBubble
+                              }}
+                              onAction={onAdminAction}
+                              isInline={true}
+                            />
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* REAL CUSTOMER TRACKING PRODUCTION VIEW */}
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-100 pb-3">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          🎯 Real-Time Shopify Customer Sync Ledger
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Track real registration logs, points balances, and checkout behaviors live from your active shopify shop storefront.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 bg-emerald-550/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                        <span className="text-[10px] font-extrabold text-emerald-400 font-mono tracking-wider uppercase">LIVE RECORD SYNCHRONIZER</span>
+                      </div>
+                    </div>
+
+                    {/* Quick Synced Shopify Customer Database card list */}
+                    <div className="bg-slate-50/55 rounded-2xl p-5 border border-slate-200">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-xs font-black text-slate-700 uppercase font-mono tracking-wider">👥 Synced Profiles ({customers.length} Active Accounts)</span>
+                        <span className="text-[10px] text-slate-450 font-mono bg-white border border-slate-150 px-2.5 py-1 rounded-lg">Real-Time Sync Activated</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {customers.map((c) => {
+                          const cashEq = c.pointsBalance * pointsToPesoRate;
+                          const hasPendingRedemption = redemptionRequests.some(r => r.customerId === c.id && r.status === 'pending');
+                          return (
+                            <div key={c.id} className="bg-white border border-slate-200 hover:border-indigo-200 hover:shadow-xs p-4 rounded-xl transition-all space-y-3 relative group">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="min-w-0">
+                                  <span className="font-extrabold text-xs text-slate-900 block truncate group-hover:text-indigo-650 transition-colors">{c.name}</span>
+                                  <span className="text-[10px] text-slate-500 font-mono block truncate" title={c.email}>{c.email}</span>
+                                </div>
+                                <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-mono font-bold uppercase shrink-0">
+                                  {c.id}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 bg-slate-50/50 p-2.5 rounded-xl">
+                                <div>
+                                  <span className="text-[9px] text-slate-400 block uppercase font-mono font-bold">Loyalty Points</span>
+                                  <span className="text-xs font-black text-indigo-705 font-mono">{c.pointsBalance} pts</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] text-slate-400 block uppercase font-mono font-bold">Cash Value</span>
+                                  <span className="text-xs font-black text-emerald-600 font-mono">₱{cashEq.toFixed(2)}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-between items-center pt-1 text-[10px]">
+                                <span className="text-slate-450 font-mono truncate max-w-[190px]">
+                                  Shopify: {c.shopifyCustomerId.replace('gid://shopify/Customer/', '#')}
+                                </span>
+                                {hasPendingRedemption ? (
+                                  <span className="bg-amber-50 text-amber-800 border border-amber-200 rounded px-1.5 py-0.5 font-extrabold uppercase text-[9px] tracking-wide animate-pulse">
+                                    Cashout request
+                                  </span>
+                                ) : (
+                                  <span className="text-emerald-600 font-bold flex items-center gap-1 font-mono">
+                                    <Check className="w-3.5 h-3.5" /> SYNCED
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Informational Production Guide */}
+                    <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-slate-700 leading-relaxed grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <span className="font-extrabold text-indigo-900 flex items-center gap-1.5 uppercase font-mono tracking-wider text-[11px]">
+                          <Check className="w-4 h-4 text-indigo-600" /> Active Webhook Handlers
+                        </span>
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          Your live theme extension triggers point earnings whenever Shopify webhook calls are sent to:
+                        </p>
+                        <pre className="p-2 bg-slate-900 text-slate-200 rounded-lg text-[9px] font-mono leading-tight whitespace-pre-wrap select-all">
+                          {`https://${window.location.host}/api/webhooks/orders/paid`}
+                        </pre>
+                      </div>
+
+                      <div className="space-y-1.5 font-sans">
+                        <span className="font-extrabold text-indigo-950 flex items-center gap-1.5 uppercase font-mono tracking-wider text-[11px]">
+                          <Check className="w-4 h-4 text-indigo-600" /> Automated Cashouts
+                        </span>
+                        <p className="text-slate-600 text-[11px] leading-relaxed">
+                          Once buyers submit points cashouts requests in the storefront widget, they occur in your main Payouts tab instantly. Approve or reject transactions to dispatch real logs securely.
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                </>
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      {/* Actions Row */}
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleSettingsSubmit}
+                disabled={isSubmitting}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
+              >
+                {isSubmitting ? 'Saving changes...' : 'Save Shopify Configuration Settings'}
+              </button>
+            </div>
           </div>
         )}
 

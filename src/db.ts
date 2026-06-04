@@ -1,6 +1,25 @@
 import fs from 'fs';
 import path from 'path';
-import { DatabaseSchema, Customer, PointTransaction, RedemptionRequest, AuditLog, PayoutMethod, PayoutDetails } from './types.js';
+import { DatabaseSchema, Customer, PointTransaction, RedemptionRequest, AuditLog, PayoutMethod, PayoutDetails, ShopifySettings } from './types.js';
+
+const DEFAULT_SETTINGS: ShopifySettings = {
+  storeName: 'Artisan Bakery Manila',
+  shopifyDomain: 'potopotostudio.myshopify.com',
+  apiAccessToken: 'shpat_9182736450abcde123456789f',
+  webhookSecret: 'whsec_9876543210abcdef0123456789',
+  pointsPerPesoSpent: 1,
+  minPointsToRedeem: 100,
+  pointsToPesoRate: 1,
+  allowGCash: true,
+  allowMaya: true,
+  allowBank: true,
+  allowQRPh: true,
+  widgetLauncherText: '🇵🇭 Rewards & Cashouts',
+  widgetThemeColor: '#4f46e5',
+  widgetPosition: 'bottom-right',
+  showWelcomeBubble: true,
+  isConnected: false
+};
 
 const DB_FILE = path.join(process.cwd(), 'data-store.json');
 
@@ -111,7 +130,8 @@ export function readDb(): DatabaseSchema {
         pointTransactions: DEFAULT_TRANSACTIONS,
         redemptionRequests: DEFAULT_REDEMPTIONS,
         auditLogs: DEFAULT_LOGS,
-        mockEmails: []
+        mockEmails: [],
+        settings: DEFAULT_SETTINGS
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(initialDb, null, 2), 'utf-8');
       return initialDb;
@@ -121,6 +141,9 @@ export function readDb(): DatabaseSchema {
     if (!parsed.mockEmails) {
       parsed.mockEmails = [];
     }
+    if (!parsed.settings) {
+      parsed.settings = DEFAULT_SETTINGS;
+    }
     return parsed;
   } catch (error) {
     console.error('Error reading database file, returning default schema:', error);
@@ -129,7 +152,8 @@ export function readDb(): DatabaseSchema {
       pointTransactions: DEFAULT_TRANSACTIONS,
       redemptionRequests: DEFAULT_REDEMPTIONS,
       auditLogs: DEFAULT_LOGS,
-      mockEmails: []
+      mockEmails: [],
+      settings: DEFAULT_SETTINGS
     };
   }
 }
@@ -169,7 +193,8 @@ export const dbRepo = {
           details: 'Merchant reset database mock to seed state.'
         }
       ],
-      mockEmails: []
+      mockEmails: [],
+      settings: DEFAULT_SETTINGS
     };
     writeDb(initialDb);
   },
@@ -693,5 +718,29 @@ Best regards,
       return mappedReferrals.filter(r => r.referrerId === customerId);
     }
     return mappedReferrals;
+  },
+
+  getSettings(): ShopifySettings {
+    const db = readDb();
+    return db.settings || DEFAULT_SETTINGS;
+  },
+
+  updateSettings(newSettings: Partial<ShopifySettings>): ShopifySettings {
+    let result!: ShopifySettings;
+    mutateDb((db) => {
+      const current = db.settings || DEFAULT_SETTINGS;
+      db.settings = { ...current, ...newSettings };
+      result = db.settings;
+      
+      // Add audit log
+      db.auditLogs.unshift({
+        id: 'LOG-' + generateId(),
+        timestamp: new Date().toISOString(),
+        action: 'SETTINGS_UPDATED',
+        actor: 'admin',
+        details: `Shopify settings updated. Store: "${db.settings.storeName}", Target Domain: "${db.settings.shopifyDomain}", Min points redeemable: ${db.settings.minPointsToRedeem}, Points rate: 1 pt = ₱${db.settings.pointsToPesoRate} PHP.`
+      });
+    });
+    return result;
   }
 };

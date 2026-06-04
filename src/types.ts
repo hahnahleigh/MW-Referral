@@ -64,10 +64,30 @@ export interface MockEmail {
   requestId: string;
 }
 
+export interface ShopifySettings {
+  storeName: string;
+  shopifyDomain: string;
+  apiAccessToken: string;
+  webhookSecret: string;
+  pointsPerPesoSpent: number;
+  minPointsToRedeem: number;
+  pointsToPesoRate: number; // e.g. 1 point = X PHP
+  allowGCash: boolean;
+  allowMaya: boolean;
+  allowBank: boolean;
+  allowQRPh: boolean;
+  widgetLauncherText: string;
+  widgetThemeColor: string;
+  widgetPosition: 'bottom-right' | 'bottom-left';
+  showWelcomeBubble: boolean;
+  isConnected?: boolean;
+}
+
 export interface DatabaseSchema {
   customers: Customer[];
   pointTransactions: PointTransaction[];
   redemptionRequests: RedemptionRequest[];
   auditLogs: AuditLog[];
   mockEmails: MockEmail[];
+  settings?: ShopifySettings;
 }

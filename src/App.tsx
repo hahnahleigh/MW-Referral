@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Customer, PointTransaction, RedemptionRequest, AuditLog, MockEmail } from './types.js';
+import { Customer, PointTransaction, RedemptionRequest, AuditLog, MockEmail, ShopifySettings } from './types.js';
 import CustomerDashboard from './components/CustomerDashboard.js';
 import AdminDashboard from './components/AdminDashboard.js';
 import ShopifySimulator from './components/ShopifySimulator.js';
+import ShopifyLiveTracker from './components/ShopifyLiveTracker.js';
+import StorefrontWidget from './components/StorefrontWidget.js';
 import { Sparkles, Users, User, Shield, Terminal, ShoppingBag, Landmark, ExternalLink, HelpCircle, RefreshCw } from 'lucide-react';
 
 export default function App() {
@@ -15,6 +17,7 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [mockEmails, setMockEmails] = useState<MockEmail[]>([]);
   const [referrals, setReferrals] = useState<any[]>([]);
+  const [shopifySettings, setShopifySettings] = useState<ShopifySettings | null>(null);
   
   // Active Customer specific state
   const [customerPointsTransactions, setCustomerPointsTransactions] = useState<PointTransaction[]>([]);
@@ -110,11 +113,39 @@ export default function App() {
       } catch (e) {}
     }
 
+    // 7. Load custom Shopify Settings
+    try {
+      const settingsData = await safeFetch('/api/settings');
+      if (settingsData && settingsData.success) {
+        setShopifySettings(settingsData.settings);
+      }
+    } catch (e) {}
+
     if (customerFetchError && customers.length === 0) {
       setNetworkError('Failed to establish contact with local Node.js database server. Server may be starting up.');
     }
 
     setIsFetchingData(false);
+  };
+
+  const toggleSandboxConnection = async () => {
+    if (!shopifySettings) return;
+    try {
+      const nextConnected = !shopifySettings.isConnected;
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...shopifySettings,
+          isConnected: nextConnected
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShopifySettings(data.settings);
+        syncServerData();
+      }
+    } catch (e) {}
   };
 
   // Re-sync whenever role or components trigger events
@@ -249,20 +280,32 @@ export default function App() {
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
-              {isLgSimulatorOpen ? 'Hide Simulator' : 'Show Simulator'}
+              {isLgSimulatorOpen 
+                ? (shopifySettings?.isConnected ? 'Hide Live Tracker' : 'Hide Simulator') 
+                : (shopifySettings?.isConnected ? 'Show Live Tracker' : 'Show Simulator')}
             </button>
           </div>
         </div>
 
-        {/* Anchorable Webhook Events Simulator */}
+        {/* Anchorable Webhook Events Simulator or Live Tracker */}
         {isLgSimulatorOpen && (
           <div className="transition-all animate-in fade-in duration-300">
-            <ShopifySimulator 
-              customers={customers} 
-              pointTransactions={activeRole === 'admin' ? allRedemptions.flatMap(() => []) : customerPointsTransactions} 
-              onTriggerWebhook={syncServerData}
-              selectedCustomerId={activeRole === 'admin' ? (customers[0]?.id || '') : activeRole}
-            />
+            {shopifySettings?.isConnected ? (
+              <ShopifyLiveTracker
+                settings={shopifySettings}
+                customers={customers}
+                auditLogs={auditLogs}
+                onRefresh={syncServerData}
+                onToggleSandbox={toggleSandboxConnection}
+              />
+            ) : (
+              <ShopifySimulator 
+                customers={customers} 
+                pointTransactions={activeRole === 'admin' ? allRedemptions.flatMap(() => []) : customerPointsTransactions} 
+                onTriggerWebhook={syncServerData}
+                selectedCustomerId={activeRole === 'admin' ? (customers[0]?.id || '') : activeRole}
+              />
+            )}
           </div>
         )}
 
@@ -275,6 +318,7 @@ export default function App() {
               auditLogs={auditLogs} 
               mockEmails={mockEmails}
               referrals={referrals}
+              settings={shopifySettings}
               onAdminAction={syncServerData} 
             />
           </div>
@@ -299,7 +343,7 @@ export default function App() {
 
       </main>
 
-      {/* Persistent Information Footer */}
+      {/* Footer block */}
       <footer className="bg-white border-t border-gray-100 mt-auto py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left text-[11px] text-gray-400">

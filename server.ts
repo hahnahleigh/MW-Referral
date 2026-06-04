@@ -452,6 +452,26 @@ async function startServer() {
     }
   });
 
+  // GET /api/settings
+  app.get('/api/settings', (req, res) => {
+    try {
+      const settings = dbRepo.getSettings();
+      res.json({ success: true, settings });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST /api/settings
+  app.post('/api/settings', (req, res) => {
+    try {
+      const settings = dbRepo.updateSettings(req.body);
+      res.json({ success: true, settings });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // ==========================================
   // VITE SERVER CONNECTION
   // ==========================================
